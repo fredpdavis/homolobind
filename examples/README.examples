@@ -1,0 +1,21 @@
+This example predicts binding sites for the sequences illustrated in the
+accompanying manuscript (Fig. 4, 5). For comparison to your results, the
+expected output files are in the output_files/ directory.
+
+The input file, example_seq.ass, contains SUPERFAMILY domain assignments
+for the example sequences.
+
+
+1. Predict binding sites on the sequences:
+
+perl homolobind.pl -ass_fn example_seq.ass -out_fn example_seq.homolobind.out -err_fn example_seq.homolobind.err
+
+
+2. Make a list of sequence identifiers to visualize:
+
+awk -F"\t" '{print $2}' example_seq.ass > example_seq.id
+
+
+3. Make postscript diagrams:
+
+perl homolobind.pl -plot_annotations 1 -ass_fn example_seq.ass -results_fn example_seq.homolobind.out -seq_id_fn example_seq.id 

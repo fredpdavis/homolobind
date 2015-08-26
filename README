@@ -1,0 +1,264 @@
+----------------------------------------------------------------------------
+HOMOLOBIND: Proteome-wide prediction of protein and ligand binding sites
+            using structure
+
+v1.1. September 16, 2010.  http://fredpdavis.com/homolobind
+Copyright 2009,2010  Fred P. Davis
+----------------------------------------------------------------------------
+
+NOTE: HOMOLOBIND is maintained here for archiving purposes. The databases
+that HOMOLOBIND depends on have dramatically changed or stopped development.
+
+HOMOLOBIND predictions for several species are archived at Zenodo:
+https://zenodo.org/record/29597
+
+
+o What is HOMOLOBIND
+---------------------
+
+HOMOLOBIND identifies residues in protein sequences with significant
+similarity to structurally characterized binding sites. It transfers
+binding sites from LIGBASE (http://salilab.org/ligbase) and PIBASE
+(http://fredpdavis.com/pibase) through ASTRAL/ASTEROIDS
+(http://astral.berkeley.edu) alignments onto SUPERFAMILY
+(http://supfam.org) domain assignments.
+
+The homology transfer procedure predicts residues in ligand and protein
+binding sites with estimated true positive rates of 98% and 88%,
+respectively, at 1% false positive rates.
+
+This release is based on the SCOP v1.73 domain classification.
+
+
+o Documentation
+---------------
+
+ docs/homolobind_user_manual.pdf offers detailed instruction on
+ installation and usage. This README is meant to offer a quick guide.
+
+ examples/README.examples describes commands to recreate Fig. 4 and 5
+ in the accompanying manuscript. The directory includes input files and
+ expected output files.
+
+ HOMOLOBIND is released under the GPL v3 license.
+
+
+o Installing HOMOLOBIND
+-----------------------
+
+ Running HOMOLOBIND requires Perl, the Bit::Vector CPAN module, and wget,
+ tar, and gunzip commands to retrieve external data files (~520 MB).
+ Optionally, R and the RSPerl interface are required to calculate the
+ significance of overlap between predicted ligand and protein binding
+ sites.
+
+ 1. Add the full path of the src/perl_api directory to your PERL5LIB
+    environment variable.
+
+ 2. Edit the homolobind.pm specs section (line 70) to set the directory
+    where data files should be stored.
+
+ 3. If you want to run the program in parallel on an SGE-based computing
+    cluster, edit the homolobind.pm specs section to:
+
+    * specify the hostname from where jobs can be submitted (line 64)
+    * the number of jobs to launch (line 65)
+    * qstat polling frequency (line 66)
+
+ 4. Run: 'perl homolobind.pl -fetch_data 1' to retrieve data files from
+      the ASTRAL, ASTEROIDS, HOMOLOBIND, PIBASE, and SCOP websites.
+
+   This requires ~530MB of free space.
+
+ 5. Download SUPERFAMILY self_hits files.
+   http://pibase.janelia.org/download/homolobind/v1.1/self_hits_1.73.tar.gz
+
+   * Uncompress the file in the 'superfamily' subdirectory of the data
+     directory specified in Step 2.
+
+    mv self_hits.tar.gz HOMOLOBIND_DATA_DIRECTORY/superfamily/
+    cd HOMOLOBIND_DATA_DIRECTORY/superfamily/
+    tar xvfz self_hits.tar.gz
+
+
+o Preparing input for HOMOLOBIND
+--------------------------------
+
+ HOMOLOBIND takes as input a list of SUPERFAMILY domain assignments.
+ There are 2 ways to get these assignments:
+
+  (i) Run SUPERFAMILY v1.73 software locally to assign domains to your sequences
+      http://supfam.org/SUPERFAMILY/downloads.html
+
+      NOTE: This option currently only works with v1.73 SUPERFAMILY software.
+      SUPERFAMILY has recently (Nov 2010) updated to SCOP v1.75 domain
+      definitions, and the corresponding update for the HOMOLOBIND binding
+      site library will be available by the end of 2010.
+
+ (ii) Get precomputed genomic domain assignments by installing SUPERFAMILY
+      MySQL tables and querying for your species of interest.
+      Three tables are required: align, ass, and family.
+
+   http://pibase.janelia.org/download/homolobind/v1.1/align_01-Nov-2009.sql.gz (4 GB)
+   http://pibase.janelia.org/download/homolobind/v1.1/ass_01-Nov-2009.sql.gz (318 MB)
+   http://pibase.janelia.org/download/homolobind/v1.1/family_01-Nov-2009.sql.gz (167 MB)
+
+   To query for all human domain assignments, run:
+
+   mysql> SELECT ass.genome, ass.seqid, ass.model, ass.region, ass.evalue,
+   align.alignment, family.evalue, family.px, family.fa FROM ass, align,
+   family WHERE ass.genome = 'hs' AND ass.auto = align.auto AND
+   ass.auto = family.auto ORDER BY ass.model, family.fa ;
+
+
+o Running HOMOLOBIND
+--------------------
+
+1. Annotating binding site similarities.
+
+ USAGE: homolobind.pl -ass_fn SUPERFAMILY_assignment_file
+  [-cluster_fl 1] to run on an SGE cluster
+  [-out_fn output_file] [-err_fn error_file]
+  [-matrix_fn substitution_matrix_file] matblas format substitution matrix
+
+ For example: 
+
+  perl homolobind.pl -ass_fn hs.ass -out_fn hs.out -err_fn hs.err
+
+  This command would process the domain assignments listed in
+   `hs.ass' and list all detected binding site similarities 
+   in the `hs.out' file, with errors reported in `hs.err'.
+
+2. Creating a summary table from HOMOLOBIND output file.
+
+  perl homolobind.pl -summarize_results hs.out
+
+   This command summarizes the annotation results: numbers of proteins,
+   domains, and residues covered by domain, peptide, and ligand binding
+   sites. This command also counts predicted bifunctional residues with
+   significant similarity to both ligand and protein binding sites.
+
+3. Create a diagram depiciting predictions and domain architecture.
+
+  perl homolobind.pl -plot_annotations 1 -ass_fn ASSIGNMENT_FILE
+       -results_fn HOMOLOBIND_RESULT_FILE -seq_id SEQUENCE_IDENIFIER
+       -seq_id_fn SEQUENCE_ID_LIST_FILE
+
+  This command creates a postscript diagrams depiciting the annotated
+  binding sites for the sequence specified by -seq_id XX or the
+  sequences listed in the file specified by -seq_id_fn.
+
+
+o HOMOLOBIND output
+-------------------
+
+ Each output line describes the similarity of a target domain to a
+ structurally characterized binding site. The output is tab-delimited:
+ 1. Sequence identifier
+ 2. Domain residue range
+ 3. SCOP classification level (superfamily or family)
+ 4. SCOP classification
+ 5. Template binding site type: p=peptide, P=protein domain, L=ligand;
+                                exp=exposed residues.
+ 6. Template binding site identifier.
+ 7. Template binding site description
+ 8. List of residues aligned to template binding site
+ 9. Percent sequence identity over template binding site residues
+10. Percent sequence similarity over template binding site residues; 
+     Similarity is a Karlin-Brocchieri normalized and rescaled BLOSUM62 score,
+     described below.
+11. Number of identical binding site positions
+12. Number of aligned binding site positions
+13. Number of residues in template binding site
+14. Fraction of template binding site residues aligned to the target sequence
+15. Number of identical residues across whole domain
+16. Length of whole domain alignment
+17. Percent sequence identity across whole domain
+18. Percent sequence similarity across whole domain
+
+ For those target domains where similar binding sites were not found,
+ there will be a line with similar field as above, however in place of
+ fields 6-18, one of the following reasons will be provided:
+
+ 1. 'no template'
+
+ 2. 'sub-threshold template' - template binding sites are available
+    in the SCOP family, but are below the sequence identity threshold.
+
+ 3. 'domain family not covered by ASTRAL'. ASTRAL/ASTEROIDS only covers
+    domains in classes a-g. Classes h-k are not covered.
+
+ 4. 'ERROR in merging SUPFAM/ASTRAL alignments'.
+
+
+ * Sequence similarity score:
+
+   To provide a more graded measure of template--target similarity, a
+   sequence similarity score is computed using a normalized version of
+   the BLOSUM62 substitution matrix (Henikoff and Hennikof, PNAS 1992)
+   as suggested by Karlin and Brocchieri (J Bacteriol 1996) and
+   rescaled to range from zero to one:
+
+   sim(aa_i,aa_j) = (BLOSUM62(aa_i,aa_j)) /
+                     sqrt(BLOSUM62(aa_i, aa_i) * BLOSUM62(aa_j, aa_j)) + 1) / 2
+
+
+o Input File Formats
+--------------------
+
+ * SUPERFAMILY domain assignment file
+   - see test/example_domains.ass for an example
+
+   Each line has the following fields:
+   1. species identifier
+   2. target sequence id
+   3. SUPERFAMILY model_id
+   4. target domain residue range
+   5. superfamily-level domain assignment e-value
+   6. SUPERFAMILY alignment string
+   7. family-level domain assignment e-value
+   8. SCOP px_id
+   9. SCOP fa_id
+ 
+ * matrix_fn - substitution matrix in matblas format,
+   eg, http://www.ncbi.nlm.nih.gov/Class/FieldGuide/BLOSUM62.txt
+
+
+o Citing HOMOLOBIND
+-------------------
+
+ Proteome-wide prediction of overlapping protein and ligand binding sites
+   using structure. Davis FP. Molecular Biosystems (2011) 7: 545-557.
+   http://dx.doi.org/10.1039/C0MB00200C
+
+ HOMOLOBIND uses data from the following sources:
+ * ASTRAL/ASTEROIDS: Chandonia, et al. Nucleic Acids Res (2004) 32:D189-92.
+ * LIGBASE: Stuart, et al. Bioinformatics (2002) 8(1):200-1.
+ * PIBASE: Davis and Sali. Bioinformatics (2005) 21(9):1901-7.
+ * SCOP: Murzin, et al. J Mol Biol (1995) 247(4):536-40.
+ * SUPERFAMILY: Wilson, et al. Nucleic Acids Res (2009) 37:D380-6.
+
+
+o Contact information
+---------------------
+ Fred P. Davis
+ email: fredpdavis@gmail.com
+ web:   http://fredpdavis.com
+
+
+This file is part of HOMOLOBIND.
+
+HOMOLOBIND is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+HOMOLOBIND is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with HOMOLOBIND.  If not, see <http://www.gnu.org/licenses/>.
+
+----------------------------------------------------------------------------

@@ -1,0 +1,327 @@
+\documentclass[11pt]{article}
+\usepackage[nohead,margin=2cm,includefoot]{geometry}
+\geometry{verbose,letterpaper,tmargin=1in,bmargin=1in,lmargin=1in,rmargin=1in}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\title{HOMOLOBIND users guide v1.1\\
+\vspace{0.5cm}
+%\includegraphics[bb=279 200 355 276,scale=0.7]{homolobind_logo.pdf}
+\includegraphics[scale=0.7]{homolobind_logo.pdf}
+}
+\author{Fred P. Davis\\Janelia Farm Research Campus\\Howard Hughes Medical Institute\\{\tt davisf@janelia.hhmi.org}\\\url{http://pibase.janelia.org/homolobind}}
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+HOMOLOBIND identifies residues in protein sequences with significant similarity to structurally characterized binding sites. The program predicts residues in ligand and protein binding sites with estimated true positive rates of 98\% and 88\%, respectively, at 1\% false positive rates.\\
+
+HOMOLOBIND transfers binding sites from LIGBASE (\url{http://salilab.org/ligbase}) and PIBASE (\url{http://pibase.janelia.org}) through ASTRAL/ASTEROIDS (\url{http://astral.berkeley.edu}) alignments onto SUPERFAMILY (\url{http://supfam.org}) domain assignments.\\
+
+{\bf This release is based on the SCOP v1.73 domain classification.} SUPERFAMILY has recently (Nov 2010) updated to SCOP v1.75 domain definitions, and the corresponding HOMOLOBIND update will be available by the end of 2010.
+
+\section{Installation}
+\subsection{Download HOMOLOBIND}
+
+The package is freely available at \url{http://pibase.janelia.org/homolobind}. The main software file is \href{http://research.janelia.org/davis/homolobind/files/homolobind_v1.1.tar.gz}{homolobind\_v1.1.tar.gz}. The server also provides data files that the program downloads automatically.
+
+\subsection{Prerequisites}
+\begin{enumerate}
+\item Perl
+
+HOMOLOBIND requires Perl (\url{http://www.perl.org}), usually installed by default on Mac OS X and GNU/Linux machines. Windows users can install Perl using the Cygwin package (\url{http://www.cygwin.com}).
+
+\item Bit::Vector perl module from CPAN: \url{http://search.cpan.org/search?query=bit-vector&mode=all}
+
+\item System utilities: wget, tar, gunzip
+
+\item Optional: R (\url{http://r-project.org}) and the R perl interface (\url{http://www.omegahat.org/RSPerl/RFromPerl.html}) are required to calculate the significance of overlap between predicted ligand and protein binding sites.
+
+
+\end{enumerate}
+
+\subsection{Installing HOMOLOBIND}
+
+\begin{enumerate}
+Get the package and uncompress it in your favorite location:\\ \url{http://research.janelia.org/davis/homolobind/files/homolobind_v1.1.tar.gz}
+
+\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+mv homolobind_v1.1.tar.gz /your/favorite/location
+cd /your/favorite/location/
+tar xvfz homolobind_v1.1.tar.gz
+\end{lstlisting}
+
+\item Place the {\tt src/perl\_api} directory in your PERL5LIB environment variable.
+
+For example, if you run a csh or tcsh shell, add this to your .cshrc file:
+\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+setenv PERL5LIB {$PERL5LIB}:/your/favorite/location/homolobind_v1.1/src/perl_api
+\end{lstlisting}
+
+For a bash shell, add this to your .bashrc:
+\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+PERL5LIB=/your/favorite/location/homolobind_v1.1/src/perl_api
+export PERL5LIB
+\end{lstlisting}
+
+\item Edit the src/perl\_api/homolobind.pm specs section (line 70) to set the directory where data files should be stored
+
+\item If you want to run the program in parallel on an SGE-based computing cluster, edit the homolobind.pm specs section to:
+
+\begin{itemize}
+\item specify the hostname from where jobs can be submitted (line 64)
+\item the number of jobs to launch (line 65)
+\item the qstat polling frequency (line 66)
+
+\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+   $homolobind_specs->{SGE}->{headnode} = 'login-eddy' ;
+   $homolobind_specs->{SGE}->{numjobs} = 25 ;
+   $homolobind_specs->{SGE}->{qstat_sleep} = 120 ;
+\end{lstlisting}
+
+\end{itemize}
+
+\item Run HOMOLOBIND to retrieve the required data files ($\sim$520MB).
+
+\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+perl homolobind.pl -fetch_data 1
+\end{lstlisting}
+
+\item Download SUPERFAMILY self-hits files:
+
+\begin{enumerate}
+
+%\item Sign up for a license to access the ftp site: \url{http://supfam.org/SUPERFAMILY/downloads.html}
+%
+\item Retrieve the tar file:\\\url{http://pibase.janelia.org/download/homolobind/v1.1/self_hits_1.73.tar.gz}
+%
+%\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+%\lstset{frame=single}
+%\lstset{basicstyle=\ttfamily}
+%\begin{lstlisting}
+%ftp supfam.org
+%cd models/
+%get self_hits.tar.gz
+%\end{lstlisting}
+
+\item Uncompress the file in the 'superfamily' subdirectory of the data directory specified in Step 2.
+
+\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+mv self_hits.tar.gz HOMOLOBIND_DATA_DIRECTORY/superfamily/
+cd HOMOLOBIND_DATA_DIRECTORY/superfamily/
+tar xvfz self_hits.tar.gz
+\end{lstlisting}
+\end{enumerate}
+
+\end{enumerate}
+
+\section{Running HOMOLOBIND}
+Note, {\tt examples/README.examples} describes how to recreate Fig.\ 4 and 5 in the accompanying manuscript. The directory includes the input file and expected output files.
+
+\subsection{Preparing input for HOMOLOBIND}
+HOMOLOBIND takes as input a list of SUPERFAMILY domain assignments (File format described in `Input file formats' section). There are 2 ways to get these assignments:
+
+\begin{enumerate}
+\item Run SUPERFAMILY software (v1.73) locally to assign domains to your sequences: \url{http://supfam.org/SUPERFAMILY/downloads.html}
+
+{\em \textcolor{red}{NOTE: This option currently only works with v1.73 SUPERFAMILY software. SUPERFAMILY has recently (Nov 2010) updated to SCOP v1.75 domain definitions, and the corresponding update for the HOMOLOBIND binding site library will be available by the end of 2010.}}
+
+\item Get precomputed genomic domain assignments by installing SUPERFAMILY MySQL tables and querying for your species of interest.\\
+
+Three tables are required -- align, ass, and family -- and can be downloaded here:
+\begin{itemize}
+\item \href{http://pibase.janelia.org/download/homolobind/v1.1/align_01-Nov-2009.sql.gz}{align\_01-Nov-2009.sql.gz} (4 GB)\\
+\item \href{http://pibase.janelia.org/download/homolobind/v1.1/ass_01-Nov-2009.sql.gz}{ass\_01-Nov-2009.sql.gz} (318 MB)\\
+\item \href{http://pibase.janelia.org/download/homolobind/v1.1/family_01-Nov-2009.sql.gz}{family\_01-Nov-2009.sql.gz} (167 MB)\\
+\end{itemize}
+
+After installing them into a local MySQL database, all human domain assignments can be retrieved with the following MySQL command:
+
+\lstset{breaklines=true,language=sql,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+mysql> SELECT ass.genome, ass.seqid, ass.model, ass.region, ass.evalue, align.alignment, family.evalue, family.px, family.fa FROM ass, align, family WHERE ass.genome = 'hs' AND ass.auto = align.auto AND ass.auto = family.auto ORDER BY ass.model, family.fa ;
+\end{lstlisting}
+\end{enumerate}
+
+
+\subsection{Predict binding sites for a set of proteins}
+
+\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+perl homolobind.pl -ass_fn ASSIGNMENT_FILE -out_fn OUTPUT_FILE -err_fn ERROR_FILE
+\end{lstlisting}
+
+
+\begin{itemize}
+\item -ass\_fn SUPERFAMILY\_ASSIGNMENT\_FILENAME
+\item -cluster\_fl $<$0$|$1$>$ - optional; if 1 will run the query in parallel using an SGE computing cluster, as specified in {\tt src/perl\_api/homolobind.pm}
+\item -out\_fn OUTPUT\_FILENAME - optional; default to STDOUT
+\item -err\_fn ERROR\_FILENAME - optional; default to STDERR
+%\item -matrix\_fn SUBSTITUTION\_MATRIX\_FILENAME - optional, matblas format substitution matrix; by default uses the BLOSUM62 matrix
+%\item -thresh\_min\_L\_mw MINIMUM\_LIGAND\_MW - optional, default: 250
+%\item -thresh\_max\_L\_mw MAXIMUM\_LIGAND\_MW - optional, default: 1000
+%\item -thresh\_L\_bs\_seqid LIGAND\_BINDING\_SITE\_MINIMUM\_SEQUENCE\_IDENTITY - optional, default: binding site-specific thresholds benchmarked at 1\% FPR
+%\item -thresh\_P\_bs\_seqid DOMAIN\_BINDING\_SITE\_MINIMUM\_SEQUENCE\_IDENTITY - optional, default: binding site-specific thresholds benchmarked at 1\% FPR
+%\item -thresh\_p\_bs\_seqid PEPTIDE\_BINDING\_SITE\_MINIMUM\_SEQUENCE\_IDENTITY - optional, default: binding site-specific thresholds benchmarked at 1\% FPR
+\end{itemize}
+
+
+\subsection{Create diagrams of predicted binding sites}
+
+\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+perl homolobind.pl -plot_annotations 1 -ass_fn ASSIGNMENT_FILE -results_fn HOMOLOBIND_RESULT_FILE -seq_id SEQUENCE_IDENIFIER -seq_id_fn SEQUENCE_ID_LIST_FILE
+\end{lstlisting}
+
+This command will create postscript diagrams depiciting the annotated binding sites for the sequence specified by {\tt -seq\_id XX} or the sequences listed in the file specified by {\tt -seq\_id\_fn}.
+
+\subsection{Summarize prediction results}
+
+\lstset{breaklines=true,language=bash,breakatwhitespace=true}
+\lstset{frame=single}
+\lstset{basicstyle=\ttfamily}
+\begin{lstlisting}
+perl homolobind.pl -summarize_results HOMOLOBIND_RESULTS_FILE > summary.txt
+\end{lstlisting}
+
+This command summarizes the annotation results: numbers of proteins, domains, and residues covered by domain, peptide, and ligand binding sites. This command also counts predicted bi-functional residues, with similarity to both ligand and protein binding sites.\\
+
+\begin{itemize}
+\item -withR $<$0$|$1$>$ - optional; if 1, calls R through the RSPerl interface to calculate the significance of overlap between predicted ligand and protein binding sites.
+\end{itemize}
+
+\section{HOMOLOBIND output file formats}
+\subsection{Binding site predictions}
+
+Each output line describes the similarity of a target domain to a structurally characterized binding site. The output is tab-delimited:
+
+\begin{enumerate}
+\item Sequence identifier
+\item Domain residue range
+\item SCOP classification level (superfamily or family)
+\item SCOP classification
+\item Template binding site type: p=peptide, P=protein domain, L=ligand; exp=exposed residues.
+\item Template binding site identifier.
+\item Template binding site description
+\item List of residues aligned to template binding site
+\item Percent sequence identity over template binding site residues
+\item Percent sequence similarity over template binding site residues;\\Similarity is a Karlin-Brocchieri normalized and rescaled BLOSUM62 score, equation below.
+\item Number of identical binding site positions
+\item Number of aligned binding site positions
+\item Number of residues in template binding site
+\item Fraction of template binding site residues aligned to the target sequence
+\item Number of identical residues across whole domain
+\item Length of whole domain alignment
+\item Percent sequence identity across whole domain
+\item Percent sequence similarity across whole domain
+\end{enumerate}
+
+For those target domains where similar binding sites were not found, there will be a line with similar fields as above, however in place of fields 6-18, one of the following reasons will be provided:
+\begin{enumerate}
+\item `no template'
+
+\item `sub-threshold template' - template binding sites are available in the SCOP family, but are below the sequence identity threshold.
+
+\item `domain family not covered by ASTRAL'. ASTRAL/ASTEROIDS only covers domains in classes a-g. Classes h-k are not covered.
+
+\item `ERROR in merging SUPFAM/ASTRAL alignments'.
+\end{enumerate}
+
+To provide a more graded measure of template--target similarity, a sequence similarity score is computed using a normalized version of the BLOSUM62 substitution matrix (Henikoff and Hennikof, {\it Proc Natl Acad Sci}. 1992) as suggested by Karlin and Brocchieri ({\it J Bacteriol}. 1996) and rescaled to range from zero to one:
+
+\begin{equation}
+sim(aa_i,aa_j) = (\frac{BLOSUM62(aa_i,aa_j)}{\sqrt{BLOSUM62(aa_i, aa_i) \cdot BLOSUM62(aa_j, aa_j)}} + 1) / 2
+\end{equation}
+
+
+\subsection{Prediction summary}
+The output has 3 parts:
+\begin{itemize}
+   \item Annotation summary for each protein (tab-delimited)
+   \begin{enumerate}
+      \item 'OVERLAP\_SUMMARY'
+      \item sequence identifier
+      \item number of exposed residues
+      \item number of ligand-binding residues
+      \item number of protein-binding residues
+      \item number of bi-functional positions
+      \item Significance of ligand/protein binding site overlap (right-sided p-value); blank if -withR option not provided
+      \item Significance of ligand/protein binding site non-overlap (left-sided p-value); blank if -withR option not provided
+      \item overlap score
+      \item ';' delimited list of unique SCOP families in the protein, as annotated by SUPERFAMILY.
+   \end{enumerate}
+   \item Overall counts for number of domains/proteins/residues/families.
+   \item Summary table in LaTeX format - similar information as above.
+\end{itemize}
+
+\section{Input file formats}
+\subsection{SUPERFAMILY domain assignments}
+
+Tab-delimited file:
+\begin{enumerate}
+\item species identifier
+\item target sequence id
+\item SUPERFAMILY model\_id
+\item target domain residue range
+\item superfamily-level domain assignment e-value
+\item SUPERFAMILY alignment string
+\item family-level domain assignment e-value
+\item SCOP px\_id
+\item SCOP fa\_id
+\end{enumerate}
+
+\subsection{Substitution matrix}
+matblas format, eg: \url{http://www.ncbi.nlm.nih.gov/Class/FieldGuide/BLOSUM62.txt}
+
+\section{Citing HOMOLOBIND}
+Proteome-wide prediction of overlapping small molecule and protein binding sites using structure.\\
+Davis FP. {\it Molecular BioSystems}, 2011. Advance Article. \url{http://dx.doi.org/10.1039/C0MB00200C}\\
+
+HOMOLOBIND uses data from the following sources:
+\begin{itemize}
+\item ASTRAL/ASTEROIDS: Chandonia, et al. Nucleic Acids Res (2004) 32:D189-92.
+\item LIGBASE: Stuart, et al. Bioinformatics (2002) 8(1):200-1.
+\item PIBASE: Davis and Sali. Bioinformatics (2005) 21(9):1901-7.
+\item SCOP: Murzin, et al. J Mol Biol (1995) 247(4):536-40.
+\item SUPERFAMILY: Wilson, et al. Nucleic Acids Res (2009) 37:D380-6.
+\end{itemize}
+
+\section{Contact Information}
+Fred P. Davis\\
+Howard Hughes Medical Institute\\
+Janelia Farm Research Campus\\
+19700 Helix Dr\\
+Ashburn, VA 20147, USA\\
+email: davisf@janelia.hhmi.org\\
+phone: (571)-209-4000 x3037
+
+\end{document}
